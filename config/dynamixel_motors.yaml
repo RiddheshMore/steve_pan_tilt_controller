@@ -1,0 +1,21 @@
+motors:
+  ids: [1, 2]
+  baud_rate: 57600
+  protocol_version: 2.0
+  device_name: "/dev/ttyUSB0"
+  scan_range: [0, 252]
+  dxl_info:
+    id_1:
+      name: "pan_tilt_motor"
+      model: "XH430-W250"
+      torque_limit: 1.0
+      velocity_limit: 1.0
+      min_position_limit: 90
+      max_position_limit: 220
+    id_2:
+      name: "tilt_motor"
+      model: "XH430-W250"
+      torque_limit: 1.0
+      velocity_limit: 1.0
+      min_position_limit: 100
+      max_position_limit: 250
