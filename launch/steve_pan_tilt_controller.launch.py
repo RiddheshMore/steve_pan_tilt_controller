@@ -3,6 +3,7 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import os
@@ -16,7 +17,7 @@ def generate_launch_description():
     # Declare launch arguments
     pan_goal_position_arg = DeclareLaunchArgument(
         'pan_goal_position',
-        default_value='75.0',
+        default_value='180.0',
         description='Goal position for pan motor in degrees'
     )
 
@@ -60,11 +61,28 @@ def generate_launch_description():
         }]
     )
 
+    launch_gui_arg = DeclareLaunchArgument(
+        'launch_gui',
+        default_value='false',
+        description='Whether to launch the slider GUI'
+    )
+
+    # Create GUI node
+    pan_tilt_gui_node = Node(
+        package='steve_pan_tilt_controller',
+        executable='pan_tilt_gui',
+        name='pan_tilt_gui',
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('launch_gui'))
+    )
+
     return LaunchDescription([
         pan_goal_position_arg,
         tilt_goal_position_arg,
         profile_velocity_arg,
         profile_acceleration_arg,
         use_sim_arg,
+        launch_gui_arg,
         pan_tilt_controller_node,
+        pan_tilt_gui_node,
     ])
