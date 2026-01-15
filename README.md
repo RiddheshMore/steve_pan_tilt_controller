@@ -1,21 +1,51 @@
-Install below dynamixel SDK
+# STEVE Pan-Tilt Controller (ROS2)
 
-```
+This package provides control for the Dynamixel XH430-W250 pan-tilt unit on the STEVE robot. It includes support for both real hardware and Gazebo simulation, and a real-time JointState publisher for TF visualization.
+
+## Installation
+
+Ensure you have the Dynamixel SDK installed:
+
+```bash
 pip install dynamixel-sdk
-
 ```
 
-To control the pan and tilt motor motions execute below command with default position values
+##  Usage
 
-- pan motor position limits : [90, 220] in degrees
-- tilt motor position limits : [100, 250] in degrees
+### 1. Launching the Controller (Real Hardware)
 
-```
-roslaunch steve_pan_tilt_controller steve_pan_tilt_controller.launch
+To start the persistent controller node that manages motor communication and publishes TFs:
+
+```bash
+ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py
 ```
 
-To control using explicit goal positions
+**Parameters:**
+- `pan_goal_position`: Initial pan angle in degrees (Default: 75.0)
+- `tilt_goal_position`: Initial tilt angle in degrees (Default: 180.0)
+- `profile_velocity`: Movement speed (Default: 50)
+- `profile_acceleration`: Movement smoothness (Default: 10)
 
+Example with custom goals:
+```bash
+ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py pan_goal_position:=90 tilt_goal_position:=200
 ```
-roslaunch steve_pan_tilt_controller steve_pan_tilt_controller.launch pan_goal_position:=90 tilt_goal_position:=180
-```
+
+### 2. Simulation Testing
+
+To test in simulation (Gazebo):
+1. Start the simulation environment:
+   ```bash
+   ros2 launch neo_simulation2 simulation.launch.py include_pan_tilt:=true
+   ```
+2. Run the simulation test script:
+   ```bash
+   python3 src/steve_pan_tilt_controller/test_pan_tilt_sim.py
+   ```
+
+
+## Hardware Details
+- **Motors**: Dynamixel XH430-W250
+- **Pan Limits**: [90°, 220°]
+- **Tilt Limits**: [100°, 250°]
+- **Default Port**: `/dev/ttyUSB0` (Configurable in `config/dynamixel_motors.yaml`)
