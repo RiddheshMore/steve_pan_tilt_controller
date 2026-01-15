@@ -14,10 +14,14 @@ pip install dynamixel-sdk
 
 ### 1. Launching the Controller (Real Hardware)
 
-To start the persistent controller node that manages motor communication and publishes TFs:
-
+Before running on the real robot, ensure you have permissions for the USB port:
 ```bash
-ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py
+sudo chmod 666 /dev/ttyUSB0
+```
+
+To start the controller in real hardware mode:
+```bash
+ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_sim:=false
 ```
 
 **Parameters:**
@@ -28,7 +32,7 @@ ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py
 
 Example with custom goals:
 ```bash
-ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py pan_goal_position:=90 tilt_goal_position:=200
+ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_sim:=false pan_goal_position:=90 tilt_goal_position:=200
 ```
 
 ### 2. Simulation Testing
