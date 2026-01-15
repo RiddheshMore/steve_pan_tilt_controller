@@ -118,27 +118,43 @@ class PanTiltController(Node):
 
     def init_hardware(self):
         """Initialize motor settings and enable torque."""
+        self.get_logger().info("Configuring motor hardware...")
         for motor_id in self.motor_ids:
-            # Check and clear hardware errors
-            if self._check_hardware_error(motor_id):
-                self.get_logger().warn(f'Motor {motor_id} has hardware error, attempting reboot...')
-                self._reboot_motor(motor_id)
-                time.sleep(1)
+            try:
+                # Check hardware status
+                if self._check_hardware_error(motor_id):
+                    self.get_logger().warn(f'Motor {motor_id} has hardware error, attempting reboot...')
+                    self._reboot_motor(motor_id)
+                    # Give it plenty of time to come back online (Dynamixels take ~1-2s to reboot)
+                    time.sleep(3.5)
+                
+                # Check again if it's alive before configuring
+                if self._get_present_position(motor_id) is None:
+                    self.get_logger().error(f'Motor {motor_id} is unresponsive after reboot!')
+                    continue
 
-            # Configure profiles
-            self._set_profile_velocity(motor_id, self.profile_velocity)
-            self._set_profile_acceleration(motor_id, self.profile_acceleration)
+                # Configure profiles
+                self._set_profile_velocity(motor_id, int(self.profile_velocity))
+                self._set_profile_acceleration(motor_id, int(self.profile_acceleration))
 
-            # Enable torque
-            self._set_motor_torque(motor_id, True)
+                # Enable torque
+                self._set_motor_torque(motor_id, True)
+                self.get_logger().info(f'Motor {motor_id} ready.')
+
+            except Exception as e:
+                self.get_logger().error(f"Error during motor {motor_id} initialization: {str(e)}")
 
         # Move to initial goal positions
-        pan_ticks = int(2048 + ((self.pan_goal_position - 90.0) * 4096 / 360.0))
-        tilt_ticks = int(2048 + ((self.tilt_goal_position - 180.0) * 4096 / 360.0))
-        
-        self.get_logger().info(f'Moving to initial positions: Pan={self.pan_goal_position}, Tilt={self.tilt_goal_position}')
-        self._set_motor_position(self.motor_ids[0], pan_ticks)
-        self._set_motor_position(self.motor_ids[1], tilt_ticks)
+        try:
+            # Map degrees to ticks
+            pan_ticks = int(2048 + ((self.pan_goal_position - 90.0) * 4096 / 360.0))
+            tilt_ticks = int(2048 + ((self.tilt_goal_position - 180.0) * 4096 / 360.0))
+            
+            self.get_logger().info(f'Sending initial goal: Pan={self.pan_goal_position}, Tilt={self.tilt_goal_position}')
+            self._set_motor_position(self.motor_ids[0], pan_ticks)
+            self._set_motor_position(self.motor_ids[1], tilt_ticks)
+        except Exception as e:
+            self.get_logger().error(f"Could not send initial goal: {str(e)}")
 
     def send_sim_command(self, pan_rad, tilt_rad, duration=2.0):
         """Send a trajectory goal to Gazebo."""
