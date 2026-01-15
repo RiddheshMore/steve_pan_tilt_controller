@@ -31,8 +31,8 @@ class PanTiltController(Node):
         self.declare_parameter('config_file', '')
         self.declare_parameter('use_sim', False)
         
-        # Positions can be passed as INT or DOUBLE, so we handle both flexibly
-        self._declare_flexible_parameter('pan_goal_position', 90.0)
+        # Initial positions - Now using absolute degrees (180 is center)
+        self._declare_flexible_parameter('pan_goal_position', 180.0)
         self._declare_flexible_parameter('tilt_goal_position', 180.0)
         
         self.declare_parameter('profile_velocity', 50)
@@ -56,7 +56,7 @@ class PanTiltController(Node):
         else:
             self.init_real(config_file)
 
-        # Create Timer for Joint State Publishing (Real mode only)
+        # Create Timer for Joint State Publishing
         if not self.use_sim:
             self.timer = self.create_timer(1.0 / self.publish_rate, self.publish_joint_states)
         
@@ -77,8 +77,8 @@ class PanTiltController(Node):
             '/pan_tilt_controller/follow_joint_trajectory'
         )
         
-        # Move to initial position after a short delay
-        pan_rad = (self.pan_goal_position - 90.0) * (math.pi / 180.0)
+        # Convert absolute degrees to radians for simulation (assuming 180 is center/0 radians)
+        pan_rad = (self.pan_goal_position - 180.0) * (math.pi / 180.0)
         tilt_rad = (self.tilt_goal_position - 180.0) * (math.pi / 180.0)
         
         self.timer = self.create_timer(1.0, lambda: self.send_sim_command(pan_rad, tilt_rad))
@@ -96,24 +96,18 @@ class PanTiltController(Node):
         self.baud_rate = config['motors']['baud_rate']
         self.device_name = config['motors']['device_name']
         
-        # Initialize PortHandler and PacketHandler
         self.port_handler = PortHandler(self.device_name)
         self.packet_handler = PacketHandler(2.0)
 
-        # Open port
         if not self.port_handler.openPort():
             self.get_logger().error(f'Failed to open port {self.device_name}')
             return
 
-        # Set port baud rate
         if not self.port_handler.setBaudRate(self.baud_rate):
             self.get_logger().error(f'Failed to set baud rate {self.baud_rate}')
             return
 
-        # Setup Publishers
         self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
-        
-        # Initial Hardware setup
         self.init_hardware()
 
     def init_hardware(self):
@@ -121,36 +115,29 @@ class PanTiltController(Node):
         self.get_logger().info("Configuring motor hardware...")
         for motor_id in self.motor_ids:
             try:
-                # Check hardware status
                 if self._check_hardware_error(motor_id):
                     self.get_logger().warn(f'Motor {motor_id} has hardware error, attempting reboot...')
                     self._reboot_motor(motor_id)
-                    # Give it plenty of time to come back online (Dynamixels take ~1-2s to reboot)
                     time.sleep(3.5)
                 
-                # Check again if it's alive before configuring
                 if self._get_present_position(motor_id) is None:
                     self.get_logger().error(f'Motor {motor_id} is unresponsive after reboot!')
                     continue
 
-                # Configure profiles
                 self._set_profile_velocity(motor_id, int(self.profile_velocity))
                 self._set_profile_acceleration(motor_id, int(self.profile_acceleration))
-
-                # Enable torque
                 self._set_motor_torque(motor_id, True)
                 self.get_logger().info(f'Motor {motor_id} ready.')
 
             except Exception as e:
                 self.get_logger().error(f"Error during motor {motor_id} initialization: {str(e)}")
 
-        # Move to initial goal positions
+        # Move to initial positions using absolute degrees (direct tick mapping)
         try:
-            # Map degrees to ticks
-            pan_ticks = int(2048 + ((self.pan_goal_position - 90.0) * 4096 / 360.0))
-            tilt_ticks = int(2048 + ((self.tilt_goal_position - 180.0) * 4096 / 360.0))
+            pan_ticks = int(self.pan_goal_position * 4096 / 360.0)
+            tilt_ticks = int(self.tilt_goal_position * 4096 / 360.0)
             
-            self.get_logger().info(f'Sending initial goal: Pan={self.pan_goal_position}, Tilt={self.tilt_goal_position}')
+            self.get_logger().info(f'Sending initial goal (Absolute): Pan={self.pan_goal_position}°, Tilt={self.tilt_goal_position}°')
             self._set_motor_position(self.motor_ids[0], pan_ticks)
             self._set_motor_position(self.motor_ids[1], tilt_ticks)
         except Exception as e:
@@ -181,7 +168,6 @@ class PanTiltController(Node):
     def command_callback(self, msg):
         """Callback to handle position commands in radians."""
         if len(msg.data) < 2:
-            self.get_logger().warn('Command message must have at least [pan, tilt] values')
             return
 
         pan_rad = msg.data[0]
@@ -190,8 +176,7 @@ class PanTiltController(Node):
         if self.use_sim:
             self.send_sim_command(pan_rad, tilt_rad)
         else:
-            # Convert radians to Dynamixel ticks (0-4095)
-            # Assuming 2048 is 0 radians (center)
+            # For command callback (radians), we still use 180 (2048) as center/zero
             pan_ticks = int(2048 + (pan_rad * 4096 / (2 * math.pi)))
             tilt_ticks = int(2048 + (tilt_rad * 4096 / (2 * math.pi)))
             self._set_motor_position(self.motor_ids[0], pan_ticks)
@@ -207,6 +192,7 @@ class PanTiltController(Node):
         for motor_id in self.motor_ids:
             pos_ticks = self._get_present_position(motor_id)
             if pos_ticks is not None:
+                # Radian reporting is relative to 180 center
                 rad = (pos_ticks - 2048) * (2 * math.pi / 4096)
                 positions.append(rad)
             else:

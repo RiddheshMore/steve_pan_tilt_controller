@@ -7,15 +7,15 @@ motors:
   dxl_info:
     id_1:
       name: "pan_tilt_motor"
-      model: "XH430-W250"
+      model: "XL430-W250"
       torque_limit: 1.0
       velocity_limit: 1.0
       min_position_limit: 90
-      max_position_limit: 220
+      max_position_limit: 270
     id_2:
       name: "tilt_motor"
-      model: "XH430-W250"
+      model: "XL430-W250"
       torque_limit: 1.0
       velocity_limit: 1.0
-      min_position_limit: 100
-      max_position_limit: 250
+      min_position_limit: 90
+      max_position_limit: 270

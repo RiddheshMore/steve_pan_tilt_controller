@@ -51,7 +51,7 @@ To test in simulation (Gazebo):
 
 
 ## Hardware Details
-- **Motors**: Dynamixel XH430-W250
-- **Pan Limits**: [90°, 220°]
-- **Tilt Limits**: [100°, 250°]
+- **Motors**: Dynamixel XL430-W250
+- **Pan Limits**: [90°, 270°]
+- **Tilt Limits**: [90°, 270°]
 - **Default Port**: `/dev/ttyUSB0` (Configurable in `config/dynamixel_motors.yaml`)
