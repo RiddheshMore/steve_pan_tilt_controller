@@ -34,13 +34,15 @@ ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py pan_go
 ### 2. Simulation Testing
 
 To test in simulation (Gazebo):
-1. Start the simulation environment:
+
+1. **Start the simulation environment**:
    ```bash
-   ros2 launch neo_simulation2 simulation.launch.py include_pan_tilt:=true
+   ros2 launch neo_simulation2 simulation.launch.py my_robot:=mmo_700 world:=neo_workshop arm_type:=ur5e include_pan_tilt:=true
    ```
-2. Run the simulation test script:
+
+2. **Run the controller in simulation mode**:
    ```bash
-   python3 src/steve_pan_tilt_controller/test_pan_tilt_sim.py
+   ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_sim:=true pan_goal_position:=90 tilt_goal_position:=180
    ```
 
 

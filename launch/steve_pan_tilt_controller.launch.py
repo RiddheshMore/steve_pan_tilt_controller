@@ -38,6 +38,12 @@ def generate_launch_description():
         description='Profile acceleration for smooth ramp (rev/min^2, lower=smoother)'
     )
 
+    use_sim_arg = DeclareLaunchArgument(
+        'use_sim',
+        default_value='false',
+        description='Whether to use simulation mode'
+    )
+
     # Create node
     pan_tilt_controller_node = Node(
         package='steve_pan_tilt_controller',
@@ -46,6 +52,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'config_file': config_file,
+            'use_sim': LaunchConfiguration('use_sim'),
             'pan_goal_position': LaunchConfiguration('pan_goal_position'),
             'tilt_goal_position': LaunchConfiguration('tilt_goal_position'),
             'profile_velocity': LaunchConfiguration('profile_velocity'),
@@ -58,5 +65,6 @@ def generate_launch_description():
         tilt_goal_position_arg,
         profile_velocity_arg,
         profile_acceleration_arg,
+        use_sim_arg,
         pan_tilt_controller_node,
     ])

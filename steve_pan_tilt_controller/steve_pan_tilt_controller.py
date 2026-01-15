@@ -29,19 +29,62 @@ class PanTiltController(Node):
 
         # Declare parameters
         self.declare_parameter('config_file', '')
-        self.declare_parameter('pan_goal_position', 90.0)
-        self.declare_parameter('tilt_goal_position', 180.0)
+        self.declare_parameter('use_sim', False)
+        
+        # Positions can be passed as INT or DOUBLE, so we handle both flexibly
+        self._declare_flexible_parameter('pan_goal_position', 90.0)
+        self._declare_flexible_parameter('tilt_goal_position', 180.0)
+        
         self.declare_parameter('profile_velocity', 50)
         self.declare_parameter('profile_acceleration', 10)
         self.declare_parameter('publish_rate', 20.0)
 
         # Get parameters
         config_file = self.get_parameter('config_file').value
+        self.use_sim = self.get_parameter('use_sim').value
+        self.pan_goal_position = self._get_flexible_float('pan_goal_position')
+        self.tilt_goal_position = self._get_flexible_float('tilt_goal_position')
         self.profile_velocity = self.get_parameter('profile_velocity').value
         self.profile_acceleration = self.get_parameter('profile_acceleration').value
         self.publish_rate = self.get_parameter('publish_rate').value
 
-        # Load config from YAML
+        # Joint names should match URDF
+        self.joint_names = ['pan_tilt_pan_motor_joint', 'pan_tilt_tilt_motor_joint']
+
+        if self.use_sim:
+            self.init_sim()
+        else:
+            self.init_real(config_file)
+
+        # Create Timer for Joint State Publishing (Real mode only)
+        if not self.use_sim:
+            self.timer = self.create_timer(1.0 / self.publish_rate, self.publish_joint_states)
+        
+        # Setup Command Subscriber
+        self.cmd_sub = self.create_subscription(Float64MultiArray, '/pan_tilt/command', self.command_callback, 10)
+        
+        self.get_logger().info(f'Pan-Tilt Controller initialized (Mode: {"SIM" if self.use_sim else "REAL"})')
+
+    def init_sim(self):
+        """Initialize connection to Gazebo trajectory controller."""
+        from rclpy.action import ActionClient
+        from control_msgs.action import FollowJointTrajectory
+        
+        self.get_logger().info('Initializing Simulation Bridge...')
+        self.sim_client = ActionClient(
+            self,
+            FollowJointTrajectory,
+            '/pan_tilt_controller/follow_joint_trajectory'
+        )
+        
+        # Move to initial position after a short delay
+        pan_rad = (self.pan_goal_position - 90.0) * (math.pi / 180.0)
+        tilt_rad = (self.tilt_goal_position - 180.0) * (math.pi / 180.0)
+        
+        self.timer = self.create_timer(1.0, lambda: self.send_sim_command(pan_rad, tilt_rad))
+
+    def init_real(self, config_file):
+        """Initialize connection to actual Dynamixel hardware."""
         if not config_file:
             self.get_logger().error('No config_file parameter provided!')
             return
@@ -53,9 +96,6 @@ class PanTiltController(Node):
         self.baud_rate = config['motors']['baud_rate']
         self.device_name = config['motors']['device_name']
         
-        # Joint names should match URDF
-        self.joint_names = ['pan_tilt_pan_motor_joint', 'pan_tilt_tilt_motor_joint']
-
         # Initialize PortHandler and PacketHandler
         self.port_handler = PortHandler(self.device_name)
         self.packet_handler = PacketHandler(2.0)
@@ -70,17 +110,11 @@ class PanTiltController(Node):
             self.get_logger().error(f'Failed to set baud rate {self.baud_rate}')
             return
 
-        # Setup Publishers and Subscribers
+        # Setup Publishers
         self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
-        self.cmd_sub = self.create_subscription(Float64MultiArray, '/pan_tilt/command', self.command_callback, 10)
         
         # Initial Hardware setup
         self.init_hardware()
-
-        # Create Timer for Joint State Publishing
-        self.timer = self.create_timer(1.0 / self.publish_rate, self.publish_joint_states)
-        
-        self.get_logger().info('Pan-Tilt Controller initialized and publishing joint states.')
 
     def init_hardware(self):
         """Initialize motor settings and enable torque."""
@@ -98,6 +132,36 @@ class PanTiltController(Node):
             # Enable torque
             self._set_motor_torque(motor_id, True)
 
+        # Move to initial goal positions
+        pan_ticks = int(2048 + ((self.pan_goal_position - 90.0) * 4096 / 360.0))
+        tilt_ticks = int(2048 + ((self.tilt_goal_position - 180.0) * 4096 / 360.0))
+        
+        self.get_logger().info(f'Moving to initial positions: Pan={self.pan_goal_position}, Tilt={self.tilt_goal_position}')
+        self._set_motor_position(self.motor_ids[0], pan_ticks)
+        self._set_motor_position(self.motor_ids[1], tilt_ticks)
+
+    def send_sim_command(self, pan_rad, tilt_rad, duration=2.0):
+        """Send a trajectory goal to Gazebo."""
+        from control_msgs.action import FollowJointTrajectory
+        from trajectory_msgs.msg import JointTrajectoryPoint
+        from builtin_interfaces.msg import Duration
+        
+        if not self.sim_client.server_is_ready():
+            return
+
+        self.timer.cancel()
+        
+        goal_msg = FollowJointTrajectory.Goal()
+        goal_msg.trajectory.joint_names = self.joint_names
+        
+        point = JointTrajectoryPoint()
+        point.positions = [pan_rad, tilt_rad]
+        point.time_from_start = Duration(sec=int(duration), nanosec=int((duration % 1) * 1e9))
+        
+        goal_msg.trajectory.points = [point]
+        self.get_logger().info(f'Moving simulation joints to: Pan={pan_rad:.2f}, Tilt={tilt_rad:.2f}')
+        self.sim_client.send_goal_async(goal_msg)
+
     def command_callback(self, msg):
         """Callback to handle position commands in radians."""
         if len(msg.data) < 2:
@@ -107,13 +171,15 @@ class PanTiltController(Node):
         pan_rad = msg.data[0]
         tilt_rad = msg.data[1]
 
-        # Convert radians to Dynamixel ticks (0-4095)
-        # Assuming 2048 is 0 radians (center)
-        pan_ticks = int(2048 + (pan_rad * 4096 / (2 * math.pi)))
-        tilt_ticks = int(2048 + (tilt_rad * 4096 / (2 * math.pi)))
-
-        self._set_motor_position(self.motor_ids[0], pan_ticks)
-        self._set_motor_position(self.motor_ids[1], tilt_ticks)
+        if self.use_sim:
+            self.send_sim_command(pan_rad, tilt_rad)
+        else:
+            # Convert radians to Dynamixel ticks (0-4095)
+            # Assuming 2048 is 0 radians (center)
+            pan_ticks = int(2048 + (pan_rad * 4096 / (2 * math.pi)))
+            tilt_ticks = int(2048 + (tilt_rad * 4096 / (2 * math.pi)))
+            self._set_motor_position(self.motor_ids[0], pan_ticks)
+            self._set_motor_position(self.motor_ids[1], tilt_ticks)
 
     def publish_joint_states(self):
         """Read present positions and publish JointState message."""
@@ -125,7 +191,6 @@ class PanTiltController(Node):
         for motor_id in self.motor_ids:
             pos_ticks = self._get_present_position(motor_id)
             if pos_ticks is not None:
-                # Convert ticks to radians
                 rad = (pos_ticks - 2048) * (2 * math.pi / 4096)
                 positions.append(rad)
             else:
@@ -135,7 +200,6 @@ class PanTiltController(Node):
         self.joint_state_pub.publish(joint_state)
 
     def _get_present_position(self, motor_id: int):
-        """Read the present position of a motor."""
         pos, result, error = self.packet_handler.read4ByteTxRx(
             self.port_handler, motor_id, self.ADDR_PRESENT_POSITION
         )
@@ -173,8 +237,20 @@ class PanTiltController(Node):
             self.port_handler, motor_id, self.ADDR_PROFILE_ACCELERATION, acceleration
         )
 
+    def _declare_flexible_parameter(self, name, default_value):
+        try:
+            self.declare_parameter(name, float(default_value))
+        except rclpy.exceptions.InvalidParameterTypeException:
+            self.declare_parameter(name, int(default_value))
+
+    def _get_flexible_float(self, name):
+        param = self.get_parameter(name)
+        if param.value is None:
+            return 0.0
+        return float(param.value)
+
     def __del__(self):
-        if hasattr(self, 'port_handler'):
+        if not self.use_sim and hasattr(self, 'port_handler'):
             self.port_handler.closePort()
 
 
