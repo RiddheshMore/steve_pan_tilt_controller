@@ -253,7 +253,8 @@ class PanTiltController(Node):
 
     def __del__(self):
         if not self.use_sim and hasattr(self, 'port_handler'):
-            self.port_handler.closePort()
+            if hasattr(self.port_handler, 'ser') and self.port_handler.ser is not None:
+                self.port_handler.closePort()
 
 
 def main(args=None):
