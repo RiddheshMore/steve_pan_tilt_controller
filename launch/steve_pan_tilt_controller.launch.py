@@ -18,13 +18,38 @@ def generate_launch_description():
     pan_goal_position_arg = DeclareLaunchArgument(
         'pan_goal_position',
         default_value='180.0',
-        description='Goal position for pan motor in degrees'
+        description='Goal position for pan motor in degrees (Legacy: 180 is center)'
     )
 
     tilt_goal_position_arg = DeclareLaunchArgument(
         'tilt_goal_position',
         default_value='180.0',
-        description='Goal position for tilt motor in degrees'
+        description='Goal position for tilt motor in degrees (Legacy: 180 is center)'
+    )
+    
+    # New Sweep/Trajectory arguments
+    pan_goals_arg = DeclareLaunchArgument(
+        'pan_goals',
+        default_value='[0.0]',
+        description='List of pan angles in degrees (0 is center). One value = fixed, Two values = sweep range.'
+    )
+    
+    tilt_goals_arg = DeclareLaunchArgument(
+        'tilt_goals',
+        default_value='[0.0]',
+        description='List of tilt angles in degrees (0 is center). One value = fixed, Two values = sweep range.'
+    )
+    
+    sweep_speed_arg = DeclareLaunchArgument(
+        'sweep_speed',
+        default_value='15.0',
+        description='Speed of sweep movement in degrees/second'
+    )
+    
+    log_feedback_arg = DeclareLaunchArgument(
+        'log_feedback',
+        default_value='true',
+        description='Enable feedback logging'
     )
 
     profile_velocity_arg = DeclareLaunchArgument(
@@ -56,6 +81,10 @@ def generate_launch_description():
             'use_sim': LaunchConfiguration('use_sim'),
             'pan_goal_position': LaunchConfiguration('pan_goal_position'),
             'tilt_goal_position': LaunchConfiguration('tilt_goal_position'),
+            'pan_goals': LaunchConfiguration('pan_goals'),
+            'tilt_goals': LaunchConfiguration('tilt_goals'),
+            'sweep_speed': LaunchConfiguration('sweep_speed'),
+            'log_feedback': LaunchConfiguration('log_feedback'),
             'profile_velocity': LaunchConfiguration('profile_velocity'),
             'profile_acceleration': LaunchConfiguration('profile_acceleration'),
         }]
@@ -79,6 +108,10 @@ def generate_launch_description():
     return LaunchDescription([
         pan_goal_position_arg,
         tilt_goal_position_arg,
+        pan_goals_arg,
+        tilt_goals_arg,
+        sweep_speed_arg,
+        log_feedback_arg,
         profile_velocity_arg,
         profile_acceleration_arg,
         use_sim_arg,

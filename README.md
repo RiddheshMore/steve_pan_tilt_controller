@@ -49,6 +49,35 @@ To test in simulation (Gazebo):
    ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_sim:=true pan_goal_position:=90 tilt_goal_position:=180
    ```
 
+### Sweep Mode
+- **Controller**: `steve_pan_tilt_controller` (Sim) or Analytic Loop (Real)
+- **Features**: Smooth approach from current position to sweep start; Continuous elliptical trajectory.
+- **Parameters**: 
+  - `pan_goals`: `[min, max]` (degrees, 0-centered)
+  - `tilt_goals`: `[min, max]` (degrees, 0-centered)
+  - `sweep_speed`: Degrees/second
+- **Example**: `ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py sweep_speed:=20.0 pan_goals:="[-30, 30]"`
+
+### 3. Sweep Mode Usage
+
+The controller now supports continuous elliptical sweeping movement.
+
+**Sweep Parameters:**
+- `pan_goals`: List of angles. `[0.0]` = Center. `[-20, 20]` = Sweep from -20 to 20.
+- `tilt_goals`: List of angles. `[0.0]` = Center. `[-10, 10]` = Sweep from -10 to 10.
+- `sweep_speed`: Speed in degrees/second.
+- `log_feedback`: Enable position logging (default: true).
+
+**Example (Hardware & Simulation):**
+```bash
+ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_sim:=true pan_goals:="[-40.0, 40.0]" tilt_goals:="[10.0, 30.0]" sweep_speed:=15.0
+```
+*(Use `use_sim:=true` for simulation)*
+
+**Note on Coordinates:**
+- `pan_goals`/`tilt_goals` are **0-centered** relative to the robot's forward direction.
+- `pan_goal_position`/`tilt_goal_position` (Legacy) are **180-centered** (Raw Dynamixel). 
+- New sweep mode automatically handles the conversion.
 
 ## Hardware Details
 - **Motors**: Dynamixel XL430-W250
