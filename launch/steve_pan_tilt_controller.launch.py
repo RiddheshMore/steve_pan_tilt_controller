@@ -31,20 +31,23 @@ def generate_launch_description():
     pan_goals_arg = DeclareLaunchArgument(
         'pan_goals',
         default_value='[0.0]',
-        description='List of pan angles in degrees (0 is center). One value = fixed, Two values = sweep range.'
+        description='Pan angles in degrees (0=center). One value=fixed, two values=sweep. '
+                    'Example sweep: [-60.0, 60.0]. MUST respect hardware limits (typically ±90°)'
     )
     
     tilt_goals_arg = DeclareLaunchArgument(
         'tilt_goals',
         default_value='[0.0]',
-        description='List of tilt angles in degrees (0 is center). One value = fixed, Two values = sweep range.'
+        description='Tilt angles in degrees (0=center). One value=fixed, two values=sweep. '
+                    'Example sweep: [-30.0, 30.0]. MUST respect hardware limits (typically ±90°)'
     )
     
     sweep_speed_arg = DeclareLaunchArgument(
         'sweep_speed',
         default_value='15.0',
-        description='Speed of sweep movement in degrees/second'
+        description='Sweep speed in degrees/second'
     )
+
     
     log_feedback_arg = DeclareLaunchArgument(
         'log_feedback',

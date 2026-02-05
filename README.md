@@ -76,8 +76,10 @@ ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_si
 
 **Note on Coordinates:**
 - `pan_goals`/`tilt_goals` are **0-centered** relative to the robot's forward direction.
-- `pan_goal_position`/`tilt_goal_position` (Legacy) are **180-centered** (Raw Dynamixel). 
-- New sweep mode automatically handles the conversion.
+  - Fixed position: `pan_goals:="[30.0]"` → 30° right
+  - Sweep: `pan_goals:="[-30.0, 30.0]"` → sweep ±30°
+- `pan_goal_position`/`tilt_goal_position` (Legacy) are **180-centered** (Raw Dynamixel coordinates).
+- **Hardware limits** (configured in `config/dynamixel_motors.yaml`): Default [90°, 270°] = ±90° from center
 
 ## Hardware Details
 - **Motors**: Dynamixel XL430-W250
