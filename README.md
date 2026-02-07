@@ -41,7 +41,7 @@ To test in simulation (Gazebo):
 
 1. **Start the simulation environment**:
    ```bash
-   ros2 launch neo_simulation2 simulation.launch.py my_robot:=mmo_700 world:=neo_workshop arm_type:=ur5e include_pan_tilt:=true
+   ros2 launch steve_simulation simulation.launch.py my_robot:=mmo_700 world:=neo_workshop arm_type:=ur5e include_pan_tilt:=true
    ```
 
 2. **Run the controller in simulation mode**:
