@@ -7,3 +7,5 @@ __pycache__/
 install/
 build/
 log/
+__pycache__
+steve_pan_tilt_controller/__pycache__
