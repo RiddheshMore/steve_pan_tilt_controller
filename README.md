@@ -86,3 +86,18 @@ ros2 launch steve_pan_tilt_controller steve_pan_tilt_controller.launch.py use_si
 - **Pan Limits**: [90°, 270°]
 - **Tilt Limits**: [90°, 270°]
 - **Default Port**: `/dev/ttyUSB0` (Configurable in `config/dynamixel_motors.yaml`)
+
+---
+
+## Contributors & Acknowledgments
+
+This project is developed at the **Humanoid Robots Lab (HRL)**, University of Bonn.
+
+- **Riddhesh More** - [GitHub](https://github.com/RiddheshMore) | [Email](mailto:riddheshmore311@gmail.com)
+- **Gokul Krishna Chenchani** - [Email](mailto:gchencha@uni-bonn.de) (initial pan-tilt code)
+- **Shrikar Nakhye** - [GitHub](https://github.com/Itsshriks) | [Email](mailto:nakhyeshrikar@icloud.com)
+- **Pratik Adhikari** - [GitHub](https://github.com/pratik-adhikari) | [Email](mailto:pratikadhikari.de@gmail.com)
+
+### Acknowledgements
+- **Rohit Menon** - For mentorship and technical guidance on Neobotix platforms.
+- **Prof. Maren Bennewitz** - Head of the Humanoid Robots Lab, University of Bonn.
